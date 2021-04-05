@@ -3,3 +3,25 @@
     height: 100%;
     position: absolute;
 }
+
+.container1.windowing{    
+    position: absolute;
+    background-color: gray;
+}
+
+.container1 > .menu{
+    z-index: 3;
+    background-color: #123;
+    position: relative;
+}
+
+.container1 > .slider{
+    position: absolute;
+    z-index: 2;
+}
+
+.container1 > .dockzone {
+    position: absolute;
+    z-index: 3;
+    background-color: #456;
+}

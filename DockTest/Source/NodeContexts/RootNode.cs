@@ -1,6 +1,8 @@
-﻿using DockTest.ExternalDeps.Classes;
+﻿using System;
+using DockTest.ExternalDeps.Classes;
 using DockTest.ExternalDeps.Classes.Management;
 using DockTest.ExternalDeps.Classes.Operations;
+using DockTest.Source.Operations;
 
 namespace DockTest.Source.NodeContexts
 {
@@ -20,14 +22,31 @@ namespace DockTest.Source.NodeContexts
         public IServiceData ServiceData { get; }
         public StyleOperator StyleOperator { get; }
         public NodeBase NodeBase => this;
- 
+        
+        private WindowingService WindowingService { get; }
+        public ControlOperation ControlOperation { get; }
+        
         public RootNode(IServiceData serviceData)
         {
             ServiceData = serviceData;
-            var elementContext = (RootElement = new ElementContext("test"));
-            elementContext.Add("node", Node = new LinkMember(elementContext));
-            RootElement.SetHtml("what");
+            ControlOperation = ServiceData.OperationManager.GetOperation<ControlOperation>();
+
+            WindowingService = new()
+            {
+                ControlOperation = ControlOperation
+            };
             
+            StyleOperator = 
+                ControlOperation.StyleOperator = ServiceData.OperationManager.GetOperation<StyleOperator>();
+            
+            var elementContext = (RootElement = new ElementContext("root"));
+            elementContext.Add("node", Node = new LinkMember(elementContext));
+            elementContext.cssClass = "root";
+
+            var Container = ControlOperation.RegisterControl("container");
+            WindowingService.RegisterContainer(Container);
+            
+            Container.SetParent(Node);
         }
     }
 }

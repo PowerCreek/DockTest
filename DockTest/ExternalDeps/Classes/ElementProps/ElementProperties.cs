@@ -20,6 +20,11 @@ namespace DockTest.ExternalDeps.Classes.ElementProps
             ContextItemMap.Add(name, data);
             return this;
         }
+        public ElementProperties Add(object name, object data)
+        {
+            ContextItemMap.Add($"{name}", data);
+            return this;
+        }
 
         public T Get<T>(string name)
         {
