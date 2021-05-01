@@ -44,6 +44,7 @@ namespace DockTest.Source.NodeContexts
             elementContext.cssClass = "root";
 
             var Container = ControlOperation.RegisterControl("container");
+            
             WindowingService.RegisterContainer(Container);
             
             Container.SetParent(Node);

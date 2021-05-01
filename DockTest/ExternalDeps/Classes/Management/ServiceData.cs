@@ -13,6 +13,7 @@ namespace DockTest.ExternalDeps.Classes.Management
     public class ServiceData : IServiceData
     {
         public OperationManager OperationManager { get; }
+        
         public ServiceData(OperationManager operationManager)
         {
             OperationManager = operationManager;

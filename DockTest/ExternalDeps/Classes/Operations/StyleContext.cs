@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using DockTest.ExternalDeps.Classes.Management;
 using DockTest.ExternalDeps.Interfaces;
 
@@ -42,37 +44,46 @@ namespace DockTest.ExternalDeps.Classes.Operations
             }
         }
 
-        public void WithoutStyles(StyleOperator styleOperator, ElementContext elementContext, params string[] styles)
+        public async Task WithoutStyles(StyleOperator styleOperator, ElementContext elementContext, params string[] styles)
         {
             foreach (string key in styles)
             {
-                styleOperator.SetStyle(elementContext.ElementReference, key, "");
+                await styleOperator.SetStyle(elementContext.ElementReference, key, "");
                 StyleMap.Remove(key);
             }
             CreateOutput();
         }
         
-        public void WithStyle(StyleOperator styleOperator, ElementContext elementContext,
+        public async Task WithStyle(StyleOperator styleOperator, ElementContext elementContext,
             params (string, string)[] styles)
         {
-            foreach (var (key, value) in styles) WithStyle(styleOperator, elementContext, key, value);
+            foreach (var (key, value) in styles) await WithStyle(styleOperator, elementContext, key, value);
             
             CreateOutput();
         }
+        
+        public async Task WithStyle(StyleOperator styleOperator, ElementContext elementContext, Action callback = null,
+            params (string, string)[] styles)
+        {
+            foreach (var (key, value) in styles) await WithStyle(styleOperator, elementContext, key, value);
+            
+            CreateOutput();
+            
+            callback?.Invoke();
+        }
 
-        private void WithStyle(StyleOperator styleOperator, ElementContext elementContext, string key, string value)
+        private async Task WithStyle(StyleOperator styleOperator, ElementContext elementContext, string key, string value)
         {
             if (!StyleMap.ContainsKey(key))
             {
                 StyleMap.Add(key, value);
                 if (Equals(default, elementContext.ElementReference) || !Valid) return;
-                styleOperator.SetStyle(elementContext.ElementReference, key, value);
-                
+                await styleOperator.SetStyle(elementContext.ElementReference, key, value);
             }
             else
             {
                 if (!Equals(default, elementContext.ElementReference) && StyleMap[key] != value && Valid)
-                    styleOperator.SetStyle(elementContext.ElementReference, key, value);
+                    await styleOperator.SetStyle(elementContext.ElementReference, key, value);
 
                 StyleMap[key] = value;
             }

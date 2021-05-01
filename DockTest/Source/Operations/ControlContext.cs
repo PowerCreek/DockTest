@@ -3,6 +3,7 @@ using DockTest.ExternalDeps.Classes;
 using DockTest.ExternalDeps.Classes.Management;
 using DockTest.ExternalDeps.Classes.Operations;
 using DockTest.Source.Properties;
+using DockTest.Source.Properties.Vector;
 using Microsoft.JSInterop;
 
 namespace DockTest.Source.Operations
@@ -15,7 +16,8 @@ namespace DockTest.Source.Operations
         TRANSFORM,
         DRAGGABLE,
         MENU,
-        DOCK
+        DOCK,
+        PARTITION
     }
     
     public class ControlContext : ElementContext
@@ -40,6 +42,29 @@ namespace DockTest.Source.Operations
             return this;
         }
 
+        public ControlContext WithBounds()
+        {
+            StyleOperator styleOperator = Get<StyleOperator>("styleOperator");
+            Transform transform = Get<Transform>("transform");
+            
+            WithAttribute("style", out StyleContext containerStyle);
+            this.OnAfterRender += async () =>
+            {
+                await containerStyle.WithStyle(styleOperator, this,
+                    ("width", "100%"), 
+                    ("height", "100%")
+                );
+                
+                var item = await JsRuntime.InvokeAsync<Rect>("GetDimensions", Id);
+                
+                transform.SetPosition(new Position(item.x, item.y));
+                transform.SetSize(new Size(item.width, item.height));
+                
+                Console.WriteLine(item);
+            };
+            return this;
+        }
+
         public ControlContext WithContent<T>(out T content) where T: BaseContent
         {
             content = (T) Activator.CreateInstance(typeof(T), Id, JsRuntime);
@@ -47,7 +72,6 @@ namespace DockTest.Source.Operations
             ElementNode.Add(content.ElementNode);
             return this;
         }
-        
     }
 
     public class DockGroup : BaseContent
@@ -62,11 +86,52 @@ namespace DockTest.Source.Operations
     public class MenuContent: BaseContent
     {
             
+        public StyleContext StyleContext {
+            get {
+                Context.WithAttribute("style", out StyleContext style);
+                return style;
+            }
+        }
+        
         public MenuContent(string id, IJSRuntime jsRuntime) : base($"{id}_menu")
         {
             ControlAttribute = ControlAttribute.MENU;
             Context.cssClass = "menu";
+            
+            StyleContext.WithStyle(new StyleOperator(jsRuntime), Context,
+                ("width","100%"),
+                ("height","50px"),
+                ("background-color","lightblue"));
         }
+    }
+
+    public class Partition : BaseContent
+    {
+        
+        public StyleContext StyleContext {
+            get {
+                Context.WithAttribute("style", out StyleContext style);
+                return style;
+            }
+        }
+
+        public Partition(string id, IJSRuntime jsRuntime) : base($"{id}_partition")
+        {
+            ControlAttribute = ControlAttribute.PARTITION;
+            Context.cssClass = "partition";
+            Transform.OnMove = (transform, position) =>
+            {
+                StyleContext.WithStyle(new StyleOperator(jsRuntime), Context,
+                    ("left",$"{position.X}px"),
+                    ("top",$"{position.Y}px"));
+            };
+        }
+        
+        public void AddSubPartition()
+        {
+            
+        }
+        
     }
 
     public class ScrollContent: BaseContent

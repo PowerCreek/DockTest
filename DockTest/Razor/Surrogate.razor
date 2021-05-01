@@ -10,9 +10,18 @@
     [Parameter]
     public RenderFragment ChildContent { get; set; }
 
+    protected override Task OnAfterRenderAsync(bool firstRender)
+    {
+        ((ElementContext) ElementContext.Value).OnAfterRender?.Invoke();
+        
+        return base.OnAfterRenderAsync(firstRender);
+    }
+
     protected override void OnInitialized()
     {
-        ((ElementContext) ElementContext.Value).SurrogateReference = this;
+        ElementContext ctx;
+        (ctx = (ElementContext) ElementContext.Value).SurrogateReference = this;
+        ctx.OnInitialization?.Invoke();
         
         base.OnInitialized();
     }
@@ -92,7 +101,6 @@
                     onfocus=@SelfContext.GetEvent("onfocus") 
                     
                     @onscroll:preventDefault=@SelfContext.PreventDefaults.Contains("onwheel")
-                    
                     
                     @onwheel=@SelfContext.GetEvent("onwheel")
                     >

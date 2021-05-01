@@ -31,6 +31,9 @@ namespace DockTest.ExternalDeps.Classes.Management
         public List<string> StopPropagations { get; } = new();
         public RenderFragment HTML { get; set; }
 
+        public Action OnInitialization = () => { };
+        public Action OnAfterRender = () => { };
+
         public void SetHtml(string html)
         {
             HTML = Surrogate.CreateElement(html);

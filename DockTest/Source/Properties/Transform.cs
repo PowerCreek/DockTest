@@ -17,6 +17,8 @@ namespace DockTest.Source.Properties
                 Size = new();
             }
 
+            public bool[] SizeLock = {true};
+            
             public Size Size
             {
                 get => _size;
@@ -24,8 +26,29 @@ namespace DockTest.Source.Properties
                 {
                     if (_size.Equals(value)) return;
                     _size = new Size(value.Width, value.Height);
-                    _size.PropertyChanged += (a, b) => { OnResize?.Invoke(this, _size); };
-                    OnResize?.Invoke(this, _size);
+                    _size.PropertyChanged += (a, b) =>
+                    {
+                        if (SizeLock[0])
+                        {
+                            OnResize?.Invoke(this, _size);
+                        }
+                    };
+                    if (SizeLock[0])
+                    {
+                        OnResize?.Invoke(this, _size);
+                    }
+                }
+            }
+            
+            public void SetSize(Size size)
+            {
+                lock (SizeLock)
+                {
+                    SizeLock[0] = false;
+
+                    Size = size;
+                    
+                    SizeLock[0] = true;
                 }
             }
 
@@ -35,6 +58,8 @@ namespace DockTest.Source.Properties
                 set => GetPropertyActionCall<Size>().Action += value;
             }
 
+            public bool[] PositionLock = {true};
+            
             public Position Position
             {
                 get => _position;
@@ -44,9 +69,27 @@ namespace DockTest.Source.Properties
                     _position = new Position(value.X, value.Y);
                     _position.PropertyChanged += (a, b) =>
                     {
-                        OnMove?.Invoke(this, _position);
+                        if (PositionLock[0])
+                        {
+                            OnMove?.Invoke(this, _position);
+                        }
                     };
-                    OnMove?.Invoke(this, _position);
+                    if (PositionLock[0])
+                    {
+                        OnMove?.Invoke(this, _position);
+                    }
+                }
+            }
+
+            public void SetPosition(Position pos)
+            {
+                lock (PositionLock)
+                {
+                    PositionLock[0] = false;
+
+                    Position = pos;
+                    
+                    PositionLock[0] = true;
                 }
             }
 

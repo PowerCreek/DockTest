@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using DockTest.ExternalDeps.Classes.Management.Operations;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -21,9 +22,9 @@ namespace DockTest.ExternalDeps.Classes.Operations
             JsRuntime.InvokeVoidAsync("SetStyles", id, styleKey, value);
         }
 
-        public void SetStyle(ElementReference elem, string key, string value)
+        public async Task SetStyle(ElementReference elem, string key, string value)
         {
-            JsRuntime.InvokeVoidAsync("SetStylesByReference", elem, key, value);
+            await JsRuntime.InvokeVoidAsync("SetStylesByReference", elem, key, value);
         }
 
         public void SetStyle(string id, params (string key, string val)[] args)

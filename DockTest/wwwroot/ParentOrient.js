@@ -8,7 +8,6 @@ function SetParent(parent, child){
 
 function SetStyles(elementId, styleKey, styleValue){
     document.getElementById(elementId).style[styleKey]=styleValue
-
 }
 
 function SetStylesByReference(element, styleKey, styleValue){
@@ -25,4 +24,9 @@ function ModifyOnWheelEvent(element){
 
 function ModifyOnWheelEventOnInit(event, element){
     event.preventDefault()
+}
+
+function GetDimensions(id){
+    var hold = document.getElementById(id).getBoundingClientRect();
+    return hold;
 }
