@@ -31,13 +31,14 @@ namespace DockTest.Source.NodeContexts
             ServiceData = serviceData;
             ControlOperation = ServiceData.OperationManager.GetOperation<ControlOperation>();
 
-            WindowingService = new()
-            {
-                ControlOperation = ControlOperation
-            };
-            
             StyleOperator = 
                 ControlOperation.StyleOperator = ServiceData.OperationManager.GetOperation<StyleOperator>();
+
+            WindowingService = new()
+            {
+                ControlOperation = ControlOperation,
+                PartitionService = new PartitionService(ControlOperation)
+            };
             
             var elementContext = (RootElement = new ElementContext("root"));
             elementContext.Add("node", Node = new LinkMember(elementContext));

@@ -68,8 +68,6 @@ namespace DockTest.ExternalDeps.Classes.Operations
             foreach (var (key, value) in styles) await WithStyle(styleOperator, elementContext, key, value);
             
             CreateOutput();
-            
-            callback?.Invoke();
         }
 
         private async Task WithStyle(StyleOperator styleOperator, ElementContext elementContext, string key, string value)

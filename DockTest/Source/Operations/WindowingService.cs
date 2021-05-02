@@ -1,5 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
+using DockTest.ExternalDeps.Classes;
+using DockTest.ExternalDeps.Classes.Management;
+using DockTest.ExternalDeps.Classes.Management.Operations;
 using DockTest.ExternalDeps.Classes.Operations;
 using DockTest.Source.Properties;
 using DockTest.Source.Properties.Vector;
@@ -24,20 +31,25 @@ namespace DockTest.Source.Operations
     {
         public ControlOperation ControlOperation { get; set; }
         public ControlContext ContainerControl { get; set; }
-
         private Transform ContainerTransform { get; set; }
 
+        public PartitionService PartitionService { get; set; }
+        
         public WindowingService()
         {
             
         }
         
-        public void RegisterContainer(ControlContext container)
+        public async Task RegisterContainer(ControlContext container)
         {
-            
             ContainerControl = container;
             ContainerControl.Add("transform", ContainerTransform = new Transform());
-            ContainerControl.WithAttribute("style", out StyleContext containerStyle);
+            ContainerControl.WithStyles(out StyleContext containerStyle);
+            
+            await containerStyle.WithStyle(ControlOperation.StyleOperator, ContainerControl,
+                ("display", "flex"),
+                ("flex-direction", "column"));
+            
             ContainerControl.WithBounds();
 
             ContainerTransform.OnMove = (transform, position) =>
@@ -59,13 +71,131 @@ namespace DockTest.Source.Operations
 
             ContainerControl.cssClass = "container1 windowing";
             ContainerControl.WithContent(out MenuContent menu);
-            ContainerControl.WithContent(out ScrollContent slider);
 
-            ControlContext mainPartition;
-            ContainerControl.Add(nameof(mainPartition), mainPartition = ControlOperation.RegisterControl("mainPartition"));
-            mainPartition.cssClass = "partition";
-            ContainerControl.AddChild(mainPartition);
-            //ContainerControl.WithContent(out DockGroup dockgroup);
+            ControlContext spaceControl = new ControlContext($"{ContainerControl.Id}", ContainerControl.JsRuntime);
+            spaceControl.WithStyles(out StyleContext spaceStyle);
+            
+            await spaceStyle.WithStyle(ControlOperation.StyleOperator, spaceControl, 
+                ("width","100%"),
+                ("height","100%"),
+                ("background-color","yellow")
+            );
+
+            ContainerControl.AddChild(spaceControl);
+
+            spaceControl.WithContent(out Partition spacePartition);
+            
+            await spacePartition.StyleContext.WithStyle(ControlOperation.StyleOperator, spacePartition.Context, 
+                ("grid-template-rows", "min-content auto min-content")
+            );
+            
+            PartitionService.CreateSubPartition(spacePartition, out Partition partitionTop);
+            PartitionService.CreateSubPartition(spacePartition, out Partition partitionCenter);
+            PartitionService.CreateSubPartition(spacePartition, out Partition partitionBottom);
+            
+            PartitionService.OutputData();
+            
+            await PartitionService.SetPartionIdentity(spacePartition, Identity.VERTICAL);
+
+            await partitionTop.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionTop.Context, 
+                ("background-color","darkgray"),
+                ("height","50px"),
+                ("border-bottom","2px solid black")
+            );
+            
+            await partitionCenter.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionCenter.Context, 
+                ("background-color","white"),
+                ("height","100%")
+            );
+            
+            await partitionBottom.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionBottom.Context, 
+                ("background-color","darkgray"),
+                ("height","50px"),
+                ("border-top","2px solid black")
+            );
+            
+            await partitionCenter.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionCenter.Context, 
+                ("grid-template-columns", "min-content auto min-content")
+            );
+            
+            PartitionService.CreateSubPartition(partitionCenter, out Partition partitionLeft);
+            PartitionService.CreateSubPartition(partitionCenter, out Partition partitionMiddle);
+            PartitionService.CreateSubPartition(partitionCenter, out Partition partitionRight);
+            
+            await partitionLeft.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionLeft.Context, 
+                ("background-color","darkgray"),
+                ("width","50px"),
+                ("border-right","2px solid black")
+            );
+            
+            await partitionMiddle.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionMiddle.Context, 
+                ("background-color","white"),
+                ("grid-auto-columns","1fr"),
+                ("grid-auto-rows","1fr"),
+                ("width","100%")
+            );
+            
+            await partitionRight.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionRight.Context, 
+                ("background-color","darkgray"),
+                ("width","50px"),
+                ("border-left","2px solid black")
+            );
+
+            Task.Run(async () =>
+            {
+                ControlContext testElementA = new ControlContext("testA", ControlOperation.JsRuntime);
+                testElementA.SetHtml("HELLO WORLD A");
+                
+                ControlContext ContentControlA = PartitionService.RegisterPartitionContent(testElementA);
+                
+                PartitionService.SetPartitionContent(partitionMiddle, ContentControlA);
+                
+                ContentControlA.WithStyles(out StyleContext contentStyleA);
+                await contentStyleA.WithStyle(ControlOperation.StyleOperator, ContentControlA, 
+                    ("background-color", "red"));
+
+                await Task.Delay(2000);
+                
+                ControlContext testElementB = new ControlContext("testB", ControlOperation.JsRuntime);
+                testElementB.SetHtml("HELLO WORLD B");
+
+                ControlContext ContentControlB = PartitionService.RegisterPartitionContent(testElementB);
+                
+                ContentControlB.WithStyles(out StyleContext contentStyleB);
+                await contentStyleB.WithStyle(ControlOperation.StyleOperator, ContentControlB, 
+                    ("background-color", "gray"));
+                
+                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlA, ContentControlB}, Identity.ACROSS);
+                
+                await Task.Delay(2000);
+                
+                ControlContext testElementC = new ControlContext("testC", ControlOperation.JsRuntime);
+                testElementC.SetHtml("HELLO WORLD C");
+
+                ControlContext ContentControlC = PartitionService.RegisterPartitionContent(testElementC);
+                
+                ContentControlC.WithStyles(out StyleContext contentStyleC);
+                await contentStyleC.WithStyle(ControlOperation.StyleOperator, ContentControlC, 
+                    ("background-color", "yellow"));
+                
+                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlC, ContentControlA}, Identity.ACROSS);
+                
+                await Task.Delay(2000);
+                
+                ControlContext testElementD = new ControlContext("testD", ControlOperation.JsRuntime);
+                testElementD.SetHtml("HELLO WORLD D");
+
+                ControlContext ContentControlD = PartitionService.RegisterPartitionContent(testElementD);
+                
+                ContentControlD.WithStyles(out StyleContext contentStyleD);
+                await contentStyleD.WithStyle(ControlOperation.StyleOperator, ContentControlD, 
+                    ("background-color", "cyan"));
+                
+                PartitionService.PerformPartitionSplit(ContentControlB, new []{ContentControlD, ContentControlB}, Identity.VERTICAL);
+                
+            });
         }
+
+   
     }
 }

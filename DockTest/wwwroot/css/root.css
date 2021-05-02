@@ -25,3 +25,8 @@
     z-index: 3;
     background-color: #456;
 }
+
+.partition{
+    display: grid;
+    box-sizing: border-box;
+}

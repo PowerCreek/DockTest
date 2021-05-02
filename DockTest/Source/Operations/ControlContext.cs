@@ -42,12 +42,20 @@ namespace DockTest.Source.Operations
             return this;
         }
 
+        public ControlContext WithStyles(out StyleContext styleContext)
+        {
+            WithAttribute("style", out StyleContext style);
+            styleContext = style;
+            return this;
+        }
+
         public ControlContext WithBounds()
         {
             StyleOperator styleOperator = Get<StyleOperator>("styleOperator");
             Transform transform = Get<Transform>("transform");
             
             WithAttribute("style", out StyleContext containerStyle);
+            
             this.OnAfterRender += async () =>
             {
                 await containerStyle.WithStyle(styleOperator, this,
@@ -107,6 +115,9 @@ namespace DockTest.Source.Operations
 
     public class Partition : BaseContent
     {
+
+        public int indexer = 0;
+        public IJSRuntime JsRuntime { get; }
         
         public StyleContext StyleContext {
             get {
@@ -115,23 +126,19 @@ namespace DockTest.Source.Operations
             }
         }
 
-        public Partition(string id, IJSRuntime jsRuntime) : base($"{id}_partition")
+        public Partition(string id, IJSRuntime jsRuntime) : base($"{id}")
         {
+            JsRuntime = jsRuntime;
             ControlAttribute = ControlAttribute.PARTITION;
             Context.cssClass = "partition";
             Transform.OnMove = (transform, position) =>
             {
-                StyleContext.WithStyle(new StyleOperator(jsRuntime), Context,
+                StyleContext.WithStyle(new StyleOperator(JsRuntime), Context,
                     ("left",$"{position.X}px"),
                     ("top",$"{position.Y}px"));
             };
         }
-        
-        public void AddSubPartition()
-        {
-            
-        }
-        
+
     }
 
     public class ScrollContent: BaseContent

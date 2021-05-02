@@ -1,5 +1,7 @@
-﻿using DockTest.ExternalDeps.Classes;
+﻿using System;
+using DockTest.ExternalDeps.Classes;
 using DockTest.ExternalDeps.Classes.Management;
+using DockTest.Razor;
 using DockTest.Source.Properties;
 
 namespace DockTest.Source.Operations
@@ -19,6 +21,13 @@ namespace DockTest.Source.Operations
             
             Context.Add(ControlAttribute.NODE, ElementNode);
             Context.Add(ControlAttribute.TRANSFORM, Transform);
+        }
+        
+        public void Destroy()
+        {
+            Action ChangeState = ((ElementContext) ElementNode.Parent.Value).SurrogateReference.ChangeState;
+            ElementNode.Pop();
+            ChangeState();
         }
     }
 }
