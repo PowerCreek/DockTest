@@ -17,14 +17,14 @@ namespace DockTest.Source.Operations
 
     public record Rect
     {
-        public int x { get; set; }
-        public int y { get; set; }
-        public int top { get; set; }
-        public int left { get; set; }
-        public int right { get; set; }
-        public int bottom { get; set; }
-        public int width { get; set; }
-        public int height { get; set; }
+        public double x { get; set; }
+        public double y { get; set; }
+        public double top { get; set; }
+        public double left { get; set; }
+        public double right { get; set; }
+        public double bottom { get; set; }
+        public double width { get; set; }
+        public double height { get; set; }
     }
     
     public class WindowingService
@@ -154,7 +154,7 @@ namespace DockTest.Source.Operations
                 await contentStyleA.WithStyle(ControlOperation.StyleOperator, ContentControlA, 
                     ("background-color", "red"));
 
-                await Task.Delay(2000);
+                await Task.Delay(500);
                 
                 ControlContext testElementB = new ControlContext("testB", ControlOperation.JsRuntime);
                 testElementB.SetHtml("HELLO WORLD B");
@@ -165,9 +165,10 @@ namespace DockTest.Source.Operations
                 await contentStyleB.WithStyle(ControlOperation.StyleOperator, ContentControlB, 
                     ("background-color", "gray"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlA, ContentControlB}, Identity.ACROSS);
+                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlB, ContentControlA}, Identity.ACROSS);
                 
-                await Task.Delay(2000);
+                
+                await Task.Delay(500);
                 
                 ControlContext testElementC = new ControlContext("testC", ControlOperation.JsRuntime);
                 testElementC.SetHtml("HELLO WORLD C");
@@ -178,9 +179,9 @@ namespace DockTest.Source.Operations
                 await contentStyleC.WithStyle(ControlOperation.StyleOperator, ContentControlC, 
                     ("background-color", "yellow"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlC, ContentControlA}, Identity.ACROSS);
+                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlC, ContentControlA}, Identity.VERTICAL);
                 
-                await Task.Delay(2000);
+                await Task.Delay(500);
                 
                 ControlContext testElementD = new ControlContext("testD", ControlOperation.JsRuntime);
                 testElementD.SetHtml("HELLO WORLD D");
@@ -191,8 +192,7 @@ namespace DockTest.Source.Operations
                 await contentStyleD.WithStyle(ControlOperation.StyleOperator, ContentControlD, 
                     ("background-color", "cyan"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlB, new []{ContentControlD, ContentControlB}, Identity.VERTICAL);
-                
+                PartitionService.PerformPartitionSplit(ContentControlB, new []{ContentControlD, ContentControlB}, Identity.ACROSS);
             });
         }
 

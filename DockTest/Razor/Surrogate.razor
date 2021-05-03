@@ -40,53 +40,57 @@
                     
                     draggable=@draggable.Value
                     
-                    onmouseenter:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseenter") 
-                    onmouseenter:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseenter") 
+                    @onmouseenter:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseenter") 
+                    @onmouseenter:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseenter") 
                     onmouseenter=@SelfContext.GetEvent("onmouseenter") 
                     
-                    onmousedown:preventDefault=@SelfContext.PreventDefaults.Contains("onmousedown") 
-                    onmousedown:stopPropagation=@SelfContext.StopPropagations.Contains("onmousedown") 
-                    onmousedown=@SelfContext.GetEvent("onmousedown") 
+                    @onmousedown:preventDefault=@SelfContext.PreventDefaults.Contains("onmousedown") 
+                    @onmousedown:stopPropagation=@SelfContext.StopPropagations.Contains("onmousedown") 
+                    @onmousedown=@SelfContext.GetEvent("onmousedown") 
                     
-                    onmouseup:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseup") 
-                    onmouseup:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseup") 
-                    onmouseup=@SelfContext.GetEvent("onmouseup") 
+                    @onmouseup:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseup") 
+                    @onmouseup:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseup") 
+                    @onmouseup=@SelfContext.GetEvent("onmouseup") 
                     
-                    onmousemove:preventDefault=@SelfContext.PreventDefaults.Contains("onmousemove") 
-                    onmousemove:stopPropagation=@SelfContext.StopPropagations.Contains("onmousemove") 
-                    onmousemove=@SelfContext.GetEvent("onmousemove") 
+                    @onmousemove:preventDefault=@SelfContext.PreventDefaults.Contains("onmousemove") 
+                    @onmousemove:stopPropagation=@SelfContext.StopPropagations.Contains("onmousemove") 
+                    @onmousemove=@SelfContext.GetEvent("onmousemove") 
                     
-                    onmouseleave:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseleave") 
-                    onmouseleave:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseleave") 
+                    @onmouseleave:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseleave") 
+                    @onmouseleave:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseleave") 
                     onmouseleave=@SelfContext.GetEvent("onmouseleave") 
                     
-                    onclick:preventDefault=@SelfContext.PreventDefaults.Contains("onclick") 
-                    onclick:stopPropagation=@SelfContext.StopPropagations.Contains("onclick") 
-                    onclick=@SelfContext.GetEvent("onclick") 
+                    @onmouseout:preventDefault=@SelfContext.PreventDefaults.Contains("onmouseout") 
+                    @onmouseout:stopPropagation=@SelfContext.StopPropagations.Contains("onmouseout") 
+                    @onmouseout=@SelfContext.GetEvent("onmouseout") 
                     
-                    onkeydown:preventDefault=@SelfContext.PreventDefaults.Contains("onkeydown") 
-                    onkeydown:stopPropagation=@SelfContext.StopPropagations.Contains("onkeydown") 
-                    onkeydown=@SelfContext.GetEvent("onkeydown") 
+                    @onclick:preventDefault=@SelfContext.PreventDefaults.Contains("onclick") 
+                    @onclick:stopPropagation=@SelfContext.StopPropagations.Contains("onclick") 
+                    @onclick=@SelfContext.GetEvent("onclick") 
                     
-                    onkeyup:preventDefault=@SelfContext.PreventDefaults.Contains("onkeyup") 
-                    onkeyup:stopPropagation=@SelfContext.StopPropagations.Contains("onkeyup") 
-                    onkeyup=@SelfContext.GetEvent("onkeyup") 
+                    @onkeydown:preventDefault=@SelfContext.PreventDefaults.Contains("onkeydown") 
+                    @onkeydown:stopPropagation=@SelfContext.StopPropagations.Contains("onkeydown") 
+                    @onkeydown=@SelfContext.GetEvent("onkeydown") 
                     
-                    onkeypress:preventDefault=@SelfContext.PreventDefaults.Contains("onkeypress") 
-                    onkeypress:stopPropagation=@SelfContext.StopPropagations.Contains("onkeypress") 
-                    onkeypress=@SelfContext.GetEvent("onkeypress") 
+                    @onkeyup:preventDefault=@SelfContext.PreventDefaults.Contains("onkeyup") 
+                    @onkeyup:stopPropagation=@SelfContext.StopPropagations.Contains("onkeyup") 
+                    @onkeyup=@SelfContext.GetEvent("onkeyup") 
                     
-                    ondrag:preventDefault=@SelfContext.PreventDefaults.Contains("ondrag") 
-                    ondrag:stopPropagation=@SelfContext.StopPropagations.Contains("ondrag") 
-                    ondrag=@SelfContext.GetEvent("ondrag") 
+                    @onkeypress:preventDefault=@SelfContext.PreventDefaults.Contains("onkeypress") 
+                    @onkeypress:stopPropagation=@SelfContext.StopPropagations.Contains("onkeypress") 
+                    @onkeypress=@SelfContext.GetEvent("onkeypress") 
                     
-                    ondragstart:preventDefault=@SelfContext.PreventDefaults.Contains("ondragstart") 
-                    ondragstart:stopPropagation=@SelfContext.StopPropagations.Contains("ondragstart") 
-                    ondragstart=@SelfContext.GetEvent("ondragstart") 
+                    @ondrag:preventDefault=@SelfContext.PreventDefaults.Contains("ondrag") 
+                    @ondrag:stopPropagation=@SelfContext.StopPropagations.Contains("ondrag") 
+                    @ondrag=@SelfContext.GetEvent("ondrag") 
                     
-                    ondragend:preventDefault=@SelfContext.PreventDefaults.Contains("ondragend") 
-                    ondragend:stopPropagation=@SelfContext.StopPropagations.Contains("ondragend") 
-                    ondragend=@SelfContext.GetEvent("ondragend") 
+                    @ondragstart:preventDefault=@SelfContext.PreventDefaults.Contains("ondragstart") 
+                    @ondragstart:stopPropagation=@SelfContext.StopPropagations.Contains("ondragstart") 
+                    @ondragstart=@SelfContext.GetEvent("ondragstart") 
+                    
+                    @ondragend:preventDefault=@SelfContext.PreventDefaults.Contains("ondragend") 
+                    @ondragend:stopPropagation=@SelfContext.StopPropagations.Contains("ondragend") 
+                    @ondragend=@SelfContext.GetEvent("ondragend") 
                     
                     @ondragover:preventDefault=@SelfContext.PreventDefaults.Contains("ondragover") 
                     @ondragover:stopPropagation=@SelfContext.StopPropagations.Contains("ondragover") 
@@ -96,9 +100,9 @@
                     @ondrop:stopPropagation=@SelfContext.StopPropagations.Contains("ondrop") 
                     @ondrop=@SelfContext.GetEvent("ondrop") 
                     
-                    onfocus:preventDefault=@SelfContext.PreventDefaults.Contains("onfocus") 
-                    onfocus:stopPropagation=@SelfContext.StopPropagations.Contains("onfocus") 
-                    onfocus=@SelfContext.GetEvent("onfocus") 
+                    @onfocus:preventDefault=@SelfContext.PreventDefaults.Contains("onfocus") 
+                    @onfocus:stopPropagation=@SelfContext.StopPropagations.Contains("onfocus") 
+                    @onfocus=@SelfContext.GetEvent("onfocus") 
                     
                     @onscroll:preventDefault=@SelfContext.PreventDefaults.Contains("onwheel")
                     

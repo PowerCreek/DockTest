@@ -65,8 +65,8 @@ namespace DockTest.Source.Operations
                 
                 var item = await JsRuntime.InvokeAsync<Rect>("GetDimensions", Id);
                 
-                transform.SetPosition(new Position(item.x, item.y));
-                transform.SetSize(new Size(item.width, item.height));
+                transform.SetPosition(new Position((int) item.x,(int) item.y));
+                transform.SetSize(new Size((int) item.width,(int) item.height));
                 
                 Console.WriteLine(item);
             };

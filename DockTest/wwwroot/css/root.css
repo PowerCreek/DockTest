@@ -29,4 +29,6 @@
 .partition{
     display: grid;
     box-sizing: border-box;
+    user-select: none;
+    overflow:hidden;
 }
