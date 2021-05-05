@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Threading.Tasks;
 using BlazorWebLib.Properties;
@@ -17,6 +18,8 @@ namespace DockTest.Source.Operations
     public class InputData
     {
 
+        public int State = 0;
+        
         public object InputTarget { get; set; }
         
         public Position CurrentPosition { get; set; } = new Position(0, 0);
@@ -25,7 +28,7 @@ namespace DockTest.Source.Operations
 
         public Action<MouseEventArgs> MouseMoveAction = (args) => { };
         
-        public Action EndInputAction = () => { };
+        public Action<bool> EndInputAction = (a) => { };
         
         public void MouseIsDown()
         {
@@ -98,8 +101,7 @@ namespace DockTest.Source.Operations
 
         public void RemoveSubPartition(Partition item)
         {
-            Partition parent;
-            PartitionMap[parent = PartitionParentMap[item]].Remove(item.Context.Id);
+            PartitionMap[PartitionParentMap[item]].Remove(item.Context.Id);
             PartitionMap.Remove(item);
             PartitionIdentities.Remove(item);
         }
@@ -155,14 +157,17 @@ namespace DockTest.Source.Operations
         public InputData PartitionSliderInputData { get; set; } = new InputData();
         public Dictionary<Partition, (int delta, double percent)> PartitionWidth = new Dictionary<Partition, (int delta, double percent)>();
         public Dictionary<Partition, Action> PartitionShiftMap = new Dictionary<Partition, Action>();
-       
+        public Dictionary<Partition, int> HandleState = new Dictionary<Partition, int>();
+
+        public const int minSize = 10;
+        
         public void RegisterPartitionEvents(Partition partitionA, Partition partitionB)
         {
             
             Partition[] partitions = {partitionA, partitionB};
             Partition parent = PartitionParentMap[partitionA];
             
-            void ShiftPartition(Partition source, int dX, int dY)
+            async void ShiftPartition(Partition source, int dX, int dY)
             {
                 Partition parent;
                 Identity identity = PartitionIdentities[parent = PartitionParentMap[source]];
@@ -175,19 +180,28 @@ namespace DockTest.Source.Operations
              
                 PartitionWidth[parent] = (delta, percent);
 
-                parent.StyleContext.WithStyle(StyleOperator, parent.Context, 
-                    (TemplateItem, $"min(calc({(1-percent)*100}% - {delta}px), calc(100%))"));
+                await parent.StyleContext.WithStyle(StyleOperator, parent.Context, 
+                    (TemplateItem, $"min(max({minSize}px,calc({(1-percent)*100}% - {delta}px)), calc(100% - {minSize}px))"));
             }
 
-            async void EndInputCapture()
+            async void EndInputCapture(bool selfFire)
             {
+
+                Partition localParent = PartitionParentMap[partitionA];
+                
+                (int delta, double percent) = PartitionWidth[localParent];
+                
+                PartitionSliderInputData.State = PartitionSliderInputData.State == 1? 0:PartitionSliderInputData.State;
+                
+                if (PartitionSliderInputData.State == 2)
+                {
+                    return;
+                }
+                
                 string space = "                   ";
                 PartitionSliderInputData.MouseIsNotDown();
-                //PartitionSliderInputData.MouseMoveAction = null;
                 
-                Partition localParent = PartitionParentMap[partitionA];
                 Identity identity = PartitionIdentities[localParent];
-                
                 var rectTaskParent = JsRuntime.InvokeAsync<Rect>("GetDimensions", localParent.Context.Id);
                 var rectTaskB = JsRuntime.InvokeAsync<Rect>("GetDimensions", partitionB.Context.Id);
 
@@ -196,41 +210,70 @@ namespace DockTest.Source.Operations
                 var rectParent = await rectTaskParent;
                 var rectB = await rectTaskB;
 
-                (int delta, double percent) = PartitionWidth[localParent];
+                double sizeValue = across ? rectParent.width : rectParent.height;
                 
-                double offset = (((across ? rectParent.width : rectParent.height) * percent) + delta);
-                double into = offset / (across ? rectParent.width : rectParent.height);
+                double offset = ((sizeValue * percent) + delta);
                 
+                double divisor = (across ? rectParent.width : rectParent.height);
+                
+                double into = offset / divisor;
+
                 PartitionWidth[localParent] = (0, into);
-                Console.WriteLine(into);
 
                 string remaining = (1 - into)*100+space;
+
+                double offTrim = (minSize / divisor);
+
+                Console.WriteLine(offset +" : "+sizeValue+" : "+minSize +":"+percent);
+                Console.WriteLine("... "+ (sizeValue - minSize));
+                Console.WriteLine("...");
+                if (offset > (sizeValue - minSize))
+                {
+                    PartitionWidth[localParent] = (0, 1 - (into = offTrim));
+                    remaining = (into)*100+space;
+                    remaining = $"{minSize}px";
+                    Console.WriteLine("1");
+                    HandleState[parent] = -1;
+                }else
+                if (offset < minSize)
+                {
+                    PartitionWidth[localParent] = (0, (into = offTrim));
+                    remaining = (1-into)*100+space;
+                    remaining = $"calc(100% - {minSize}px)";
+                    Console.WriteLine("2");
+                    HandleState[parent] = 1;
+                }
+                else
+                {
+                    remaining = $"calc({remaining[0..8].Trim()+"%"})";
+                    Console.WriteLine("3   " + into);
+                    HandleState[parent] = 0;
+                }
                 
-                if (into >= 1) remaining = "0"+space;
-                if (into < 0.009) remaining = "100"+space;
-                
-                remaining = remaining[0..8].Trim()+"%";
-                
-                Console.WriteLine(remaining);
+                Console.WriteLine("end capture");
                 
                 await localParent.StyleContext.WithStyle(StyleOperator, localParent.Context, 
                     (across ? "grid-template-columns" : "grid-template-rows", 
-                        $"minmax({remaining}, {remaining})")
+                        $"clamp(10px, {remaining}, calc(100% - 10px)) ")
                 );
             }
             
             async void StartInputCapture(MouseEventArgs mArgs)
             {
+                PartitionSliderInputData.State = 1;
+                
                 PartitionSliderInputData.CurrentPosition = new Position((int)mArgs.ScreenX, (int)mArgs.ScreenY);
                     
                 Partition localParent = PartitionParentMap[partitionA];
                 (int delta, double percent) = PartitionWidth[localParent];
-                    
-                if (percent <= 0)
-                {
-                    PartitionWidth[localParent] = (0, 0);
-                }
+
+                delta = 0;
                 
+                Console.WriteLine("start: "+delta);
+                
+                PartitionWidth[localParent] = (delta, Math.Clamp(percent, 0,1));
+                HandleState[localParent] = (0);
+
                 PartitionSliderInputData.MouseIsDown();
                 PartitionSliderInputData.MouseMoveAction = (a) =>
                 {
@@ -245,17 +288,14 @@ namespace DockTest.Source.Operations
                 PartitionSliderInputData.EndInputAction = EndInputCapture;
             }
             
-
-            //set parent event for mouseleave
-            
-            if (!PartitionShiftMap.TryAdd(parent, () => { EndInputCapture(); }))
+            if (!PartitionShiftMap.TryAdd(parent, () => { EndInputCapture(parent == PartitionSliderInputData.InputTarget); }))
             {
-                PartitionShiftMap[parent] = () => { EndInputCapture(); };
+                PartitionShiftMap[parent] = () => { EndInputCapture(parent == PartitionSliderInputData.InputTarget); };
             }
             
             parent.Context.AddEvent("onmouseleave", (args) =>
             {
-                if (PartitionSliderInputData.InputTarget == parent)
+                if (PartitionSliderInputData.InputTarget == parent && PartitionSliderInputData.MouseDown)
                 {
                     PartitionShiftMap[parent]?.Invoke();
                 }
@@ -273,7 +313,8 @@ namespace DockTest.Source.Operations
             
                 p.Context.AddEvent("onmouseup", (args) =>
                 {
-                    PartitionSliderInputData.EndInputAction?.Invoke();
+                    Console.WriteLine("here");
+                    PartitionSliderInputData.EndInputAction?.Invoke(parent == PartitionSliderInputData.InputTarget);
                     PartitionSliderInputData.MouseMoveAction = null;
                     PartitionSliderInputData.InputTarget = null;
                 });
@@ -282,13 +323,37 @@ namespace DockTest.Source.Operations
                 {
                     MouseEventArgs mArgs = (MouseEventArgs) args;
 
+                    if ((mArgs.Buttons & 1) == 0)
+                    {
+                        if (PartitionSliderInputData.State == 0)
+                        {
+                            PartitionSliderInputData.State = 2;
+                            PartitionSliderInputData.EndInputAction?.Invoke(true);
+                            PartitionSliderInputData.MouseMoveAction = null;
+                            PartitionSliderInputData.EndInputAction = null;
+                        }
+                    }
+
                     //if ((mArgs.Buttons & 1) == 1 && !PartitionSliderInputData.MouseDown) StartInputCapture(mArgs);
                     if (PartitionSliderInputData.InputTarget == PartitionParentMap[p])
                     {
                         if ((mArgs.Buttons & 1) == 0)
                         {
-                            //EndInputCapture();
+                            
                             PartitionSliderInputData.MouseMoveAction = null;
+                            PartitionSliderInputData.EndInputAction = null;
+                        }
+                        else if((mArgs.Buttons & 1) == 1 && !PartitionSliderInputData.MouseDown)
+                        {
+                            //StartInputCapture(mArgs);
+                            //return;
+                        }
+                    }
+                    else
+                    {
+                        if ((mArgs.Buttons & 1) == 0)
+                        {
+                            //PartitionSliderInputData.MouseMoveAction = null;
                             //PartitionSliderInputData.EndInputAction = null;
                         }
                     }
@@ -302,18 +367,63 @@ namespace DockTest.Source.Operations
         {
             CreateSubPartition(source, out Partition partitionA);
             CreateSubPartition(source, out Partition partitionB);
-
-            int borderWidth = 4;
+            
+            
+            int borderWidth = 8;
             
             PartitionWidth.TryAdd(source, (0, 0.5));
-            
-            string[] borderSide = identity == Identity.ACROSS ? new[] {"border-right","border-left"} : new[] {"border-bottom", "border-top"};
 
-            partitionA.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
-                (borderSide[0], $"{borderWidth}px solid black"));
+            bool across = identity == Identity.ACROSS;
             
-            partitionB.StyleContext.WithStyle(StyleOperator, partitionB.Context, 
-                (borderSide[1], $"{borderWidth}px solid black"));
+            partitionA.Context.cssClass += $" {(across? "":"")}";
+            partitionB.Context.cssClass += $" {(across? "across":"vertical")}";
+                
+            source.StyleContext.WithStyle(StyleOperator, source.Context, (across? "grid-template-columns" : "grid-template-rows", "50% 50%"));
+            
+            PartitionHandle handleA = new PartitionHandle(partitionA.Context.Id, JsRuntime, StyleOperator);
+            handleA.Context.cssClass += $" {(across ? "across" : "vertical")}";
+            PartitionHandle handleB = new PartitionHandle(partitionB.Context.Id, JsRuntime, StyleOperator);
+            handleB.Context.cssClass += $" {(across ? "across" : "vertical")}";
+            
+            string[] dim = {"left", "top", "width", "height"};
+
+            string margin = across ? "" : "";
+            
+            string[][] size = across
+                ? 
+                new[] {
+                    new[] {$"calc(100% - {borderWidth}px)", "0px", $"{borderWidth}px", "100%"},
+                    new[] {"0px", "0px", $"{borderWidth}px", "100%"}
+                } : 
+                new[] {
+                    new[] {"0px", $"calc(100% - {borderWidth}px)", "100%", $"{borderWidth}px"},
+                    new[] {"0px", "0px", "100%", $"{borderWidth}px"}
+                };
+            
+            handleA.SetStyles(
+                ("display", "none"),
+                ("position", "absolute"),
+                (dim[0], size[0][0]),
+                (dim[1], size[0][1]),
+                (dim[2], size[0][2]),
+                (dim[3], size[0][3]),
+                ("background-color","#f8001e22"),
+                (margin, $"{borderWidth}px")
+            );
+            
+            handleB.SetStyles(
+                //("display", "none"),
+                ("position", "absolute"),
+                (dim[0], size[1][0]),
+                (dim[1], size[1][1]),
+                (dim[2], size[1][2]),
+                (dim[3], size[1][3]),
+                ("background-color","#f8001e22"),
+                (margin, $"{borderWidth}px")
+            );
+                
+            partitionA.ElementNode.Add(handleA.ElementNode);
+            partitionB.ElementNode.Add(handleB.ElementNode);
             
             RegisterPartitionEvents(partitionA, partitionB);
 
@@ -324,6 +434,7 @@ namespace DockTest.Source.Operations
         public ControlContext RegisterPartitionContent(ControlContext content)
         {
             ControlContext contentControl = new ControlContext("partitionContent", JsRuntime);
+            
             contentControl.StopPropagations.Add("onmousedown");
             
             content.SetParent(contentControl.ElementNode);
@@ -334,7 +445,7 @@ namespace DockTest.Source.Operations
         public void PerformPartitionSplit(ControlContext sourceContext, ControlContext[] controlContexts, Identity identity)
         {
             var sCtx = GetElementPartition(sourceContext);
-            Console.WriteLine(sCtx.Context.Id);
+            
             SplitPartition(sCtx, identity,
                 (source, partitionA, partitionB) =>
                 {
@@ -346,7 +457,6 @@ namespace DockTest.Source.Operations
 
                     partitionA.Context.OnAfterRender += () =>
                     {
-                        Console.WriteLine("HERE");
                     };
 
                     sCtx.Context.SurrogateReference?.ChangeState();

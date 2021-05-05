@@ -27,8 +27,39 @@
 }
 
 .partition{
+    position: relative;
     display: grid;
     box-sizing: border-box;
     user-select: none;
     overflow:hidden;
+    /*padding-left: 2px;*/
+    /*padding-top: 2px;*/
+}
+
+.partition.across{
+    padding-left: 8px;
+}
+.partition.vertical{
+    padding-top: 8px;
+}
+
+.partition .handle.across{
+    z-index:10;
+}
+.partition .handle.vertical{
+    z-index:10;
+}
+
+.partition-content-across-left{
+    padding-right:5px;
+}
+.partition-content-across-right{
+    padding-left:5px;
+}
+
+.partition-content-vertical-top{
+    padding-bottom:5px;
+}
+.partition-content-vertical-bottom{
+    padding-top:5px;
 }

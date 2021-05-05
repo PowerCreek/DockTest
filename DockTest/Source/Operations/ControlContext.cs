@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using DockTest.ExternalDeps.Classes;
 using DockTest.ExternalDeps.Classes.Management;
 using DockTest.ExternalDeps.Classes.Operations;
@@ -115,8 +116,6 @@ namespace DockTest.Source.Operations
 
     public class Partition : BaseContent
     {
-
-        public int indexer = 0;
         public IJSRuntime JsRuntime { get; }
         
         public StyleContext StyleContext {
@@ -138,7 +137,32 @@ namespace DockTest.Source.Operations
                     ("top",$"{position.Y}px"));
             };
         }
+    }
 
+    public class PartitionHandle : BaseContent
+    {
+
+        public StyleOperator StyleOperator { get; }
+        
+        public StyleContext StyleContext
+        {
+            get
+            {
+                Context.WithAttribute("style", out StyleContext style);
+                return style;
+            }
+        }
+        
+        public PartitionHandle(string id, IJSRuntime jsRuntime, StyleOperator styleOperator) : base($"{id}")
+        {
+            ControlAttribute = ControlAttribute.PARTITION;
+            Context.cssClass = "handle";
+        }
+        
+        public async Task SetStyles(params (string key, string val)[] styles) =>
+            await StyleContext.WithStyle(StyleOperator, Context,
+                styles
+            );
     }
 
     public class ScrollContent: BaseContent

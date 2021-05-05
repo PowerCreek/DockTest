@@ -152,7 +152,7 @@ namespace DockTest.Source.Operations
                 
                 ContentControlA.WithStyles(out StyleContext contentStyleA);
                 await contentStyleA.WithStyle(ControlOperation.StyleOperator, ContentControlA, 
-                    ("background-color", "red"));
+                    ("background-color", "darkgray"));
 
                 await Task.Delay(500);
                 
@@ -163,7 +163,7 @@ namespace DockTest.Source.Operations
                 
                 ContentControlB.WithStyles(out StyleContext contentStyleB);
                 await contentStyleB.WithStyle(ControlOperation.StyleOperator, ContentControlB, 
-                    ("background-color", "gray"));
+                    ("background-color", "darkgray"));
                 
                 PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlB, ContentControlA}, Identity.ACROSS);
                 
@@ -177,7 +177,7 @@ namespace DockTest.Source.Operations
                 
                 ContentControlC.WithStyles(out StyleContext contentStyleC);
                 await contentStyleC.WithStyle(ControlOperation.StyleOperator, ContentControlC, 
-                    ("background-color", "yellow"));
+                    ("background-color", "darkgray"));
                 
                 PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlC, ContentControlA}, Identity.VERTICAL);
                 
@@ -190,9 +190,22 @@ namespace DockTest.Source.Operations
                 
                 ContentControlD.WithStyles(out StyleContext contentStyleD);
                 await contentStyleD.WithStyle(ControlOperation.StyleOperator, ContentControlD, 
-                    ("background-color", "cyan"));
+                    ("background-color", "darkgray"));
                 
                 PartitionService.PerformPartitionSplit(ContentControlB, new []{ContentControlD, ContentControlB}, Identity.ACROSS);
+                
+                await Task.Delay(500);
+                
+                ControlContext testElementE = new ControlContext("testE", ControlOperation.JsRuntime);
+                testElementE.SetHtml("HELLO WORLD E");
+
+                ControlContext ContentControlE = PartitionService.RegisterPartitionContent(testElementE);
+                
+                ContentControlE.WithStyles(out StyleContext contentStyleE);
+                await contentStyleE.WithStyle(ControlOperation.StyleOperator, ContentControlE, 
+                    ("background-color", "darkgray"));
+                
+                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlE, ContentControlA}, Identity.ACROSS);
             });
         }
 
