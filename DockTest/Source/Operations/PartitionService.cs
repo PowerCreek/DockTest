@@ -265,8 +265,23 @@ namespace DockTest.Source.Operations
                 PartitionSliderInputData.CurrentPosition = new Position((int)mArgs.ScreenX, (int)mArgs.ScreenY);
                     
                 Partition localParent = PartitionParentMap[partitionA];
+                
+                Identity identity = PartitionIdentities[localParent];
+                
+                var rectTaskParent = JsRuntime.InvokeAsync<Rect>("GetDimensions", localParent.Context.Id);
+                var rectTaskB = JsRuntime.InvokeAsync<Rect>("GetDimensions", partitionB.Context.Id);
+                
+                bool across = identity == Identity.ACROSS;
+                
                 (int delta, double percent) = PartitionWidth[localParent];
 
+                double partitionBPosition = across ? (await rectTaskB).width : (await rectTaskB).height;
+
+                double parentSize = across ? (await rectTaskParent).width : (await rectTaskParent).height;
+
+                percent = 1-((parentSize-partitionBPosition) / parentSize);
+                Console.WriteLine($"Percent: {percent}, PositionParent: {parentSize}, PositionB: {partitionBPosition}");
+                
                 delta = 0;
                 
                 Console.WriteLine("start: "+delta);
