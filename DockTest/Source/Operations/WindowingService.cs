@@ -206,6 +206,26 @@ namespace DockTest.Source.Operations
                     ("background-color", "darkgray"));
                 
                 PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlE, ContentControlA}, Identity.ACROSS);
+
+                ControlContext hold = ContentControlE;
+                
+                for (int i = 0; i < 5; i++)
+                {
+                    await Task.Delay(100);
+                
+                    ControlContext tempElement = new ControlContext("test_"+i, ControlOperation.JsRuntime);
+                    tempElement.SetHtml("HELLO WORLD");
+
+                    ControlContext ContentControlTest = PartitionService.RegisterPartitionContent(tempElement);
+                
+                    ContentControlTest.WithStyles(out StyleContext contentStyleTest);
+                    await contentStyleTest.WithStyle(ControlOperation.StyleOperator, ContentControlTest, 
+                        ("background-color", "darkgray"));
+                
+                    PartitionService.PerformPartitionSplit(hold, new []{hold, ContentControlTest}, Identity.ACROSS);
+                    hold = ContentControlTest;
+                }
+                
             });
         }
 
