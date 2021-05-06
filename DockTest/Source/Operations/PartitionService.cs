@@ -92,9 +92,11 @@ namespace DockTest.Source.Operations
 
             source.ElementNode.Add(partition.ElementNode);
 
+            source.Context.cssClass = source.Context.cssClass.Replace(" fill", "");
+            source.Context.cssClass += " fill";
+            
             source.StyleContext.WithStyle(StyleOperator, (ElementContext)source.ElementNode.Value, 
-                ("width","100%"),
-                ("height","100%"));
+                ("flex-grow", "1"));
             
             //AdjustGridAreas(source);
         }
@@ -169,17 +171,31 @@ namespace DockTest.Source.Operations
             
             async void ShiftPartition(Partition source, int dX, int dY)
             {
-               
+                
             }
 
             async void EndInputCapture(bool selfFire)
             {
                 
+                
             }
             
             async void StartInputCapture(MouseEventArgs mArgs)
             {
-               
+                Partition localParent = PartitionParentMap[partitionA];
+                
+                var parentRectangle = JsRuntime.InvokeAsync<Rect>("GetDimensions", localParent.Context.Id);
+                var partitionARectangle = JsRuntime.InvokeAsync<Rect>("GetDimensions", partitionA.Context.Id);
+
+                (int delta, double percent) = PartitionWidth[localParent];
+
+                bool across = PartitionIdentities[localParent] == Identity.ACROSS;
+
+                double parentSize = across ? (await parentRectangle).width : (await parentRectangle).height;
+                double partASize = across ? (await partitionARectangle).width : (await partitionARectangle).height;
+
+                PartitionWidth[localParent] = (delta, percent = (partASize / parentSize));
+                Console.WriteLine($"delta: {delta}, percent: {percent}");
             }
             
             if (!PartitionShiftMap.TryAdd(parent, () => { EndInputCapture(parent == PartitionSliderInputData.InputTarget); }))
@@ -199,6 +215,7 @@ namespace DockTest.Source.Operations
                 p.Context.AddEvent("onmousedown", (args) =>
                 {
                     PartitionSliderInputData.InputTarget = PartitionParentMap[p];
+                    StartInputCapture((MouseEventArgs) args);
                     
                 });
             
@@ -211,6 +228,11 @@ namespace DockTest.Source.Operations
                 {
                     MouseEventArgs mArgs = (MouseEventArgs) args;
 
+                    if ((mArgs.Buttons & 1) == 1)
+                    {
+                        ShiftPartition();
+                    }
+                    
                 });
             }
         }
@@ -219,7 +241,6 @@ namespace DockTest.Source.Operations
         {
             CreateSubPartition(source, out Partition partitionA);
             CreateSubPartition(source, out Partition partitionB);
-            
             
             int borderWidth = 8;
             
@@ -277,6 +298,13 @@ namespace DockTest.Source.Operations
             partitionA.ElementNode.Add(handleA.ElementNode);
             partitionB.ElementNode.Add(handleB.ElementNode);
 
+            string sizeProperty = across ? "min-width" : "min-height";
+            
+            partitionA.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
+                (sizeProperty, "calc(50% - 4px)"),
+                ("width","auto"),
+                ("height","auto")
+                );
             
             partitionB.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
                 ("flex-grow", "1"));
@@ -290,6 +318,10 @@ namespace DockTest.Source.Operations
         public ControlContext RegisterPartitionContent(ControlContext content)
         {
             ControlContext contentControl = new ControlContext("partitionContent", JsRuntime);
+            
+            contentControl.WithStyles(out StyleContext style);
+            style.WithStyle(StyleOperator, contentControl, 
+                ("flex-grow", "1"));
             
             contentControl.StopPropagations.Add("onmousedown");
             
