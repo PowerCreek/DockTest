@@ -28,7 +28,7 @@
 
 .partition{
     position: relative;
-    display: grid;
+    display: flex;
     box-sizing: border-box;
     user-select: none;
     overflow:hidden;
