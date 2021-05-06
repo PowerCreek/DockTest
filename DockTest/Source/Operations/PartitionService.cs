@@ -169,14 +169,13 @@ namespace DockTest.Source.Operations
             Partition[] partitions = {partitionA, partitionB};
             Partition parent = PartitionParentMap[partitionA];
             
-            async void ShiftPartition(Partition source, int dX, int dY)
+            async void ShiftPartition(Partition parentSource, int dX, int dY)
             {
                 
             }
 
             async void EndInputCapture(bool selfFire)
             {
-                
                 
             }
             
