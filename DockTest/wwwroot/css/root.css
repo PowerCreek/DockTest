@@ -31,7 +31,7 @@
     display: flex;
     box-sizing: border-box;
     user-select: none;
-    overflow:hidden;
+    //overflow:hidden;
 }
 
 .partition.fill{
@@ -39,11 +39,16 @@
     height: 100%;
 }
 
-.partition.across{
-    padding-left: 8px;
+.partition .handle{
+    background-color: rgb(255 127 127 / 0.5);
 }
-.partition.vertical{
-    padding-top: 8px;
+
+.partition.sub.vertical > .partition.sub + .partition.sub{
+    margin-top: 8px;
+}
+
+.partition.sub.across > .partition.sub + .partition.sub{
+    margin-left: 8px;
 }
 
 .partition .handle.across{

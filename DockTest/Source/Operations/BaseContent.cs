@@ -26,7 +26,9 @@ namespace DockTest.Source.Operations
         public void Destroy()
         {
             Action ChangeState = ((ElementContext) ElementNode.Parent.Value).SurrogateReference.ChangeState;
+            Context.Key = Guid.NewGuid().ToString();
             ElementNode.Pop();
+            ElementNode.Parent = null;
             ChangeState();
         }
     }

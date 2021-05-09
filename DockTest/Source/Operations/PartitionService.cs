@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using BlazorWebLib.Properties;
+using DockTest.ExternalDeps.Classes;
 using DockTest.ExternalDeps.Classes.Management;
 using DockTest.ExternalDeps.Classes.Management.Operations;
 using DockTest.ExternalDeps.Classes.Operations;
@@ -22,13 +24,16 @@ namespace DockTest.Source.Operations
         
         public object InputTarget { get; set; }
         
+        public object SourceTarget { get; set; }
+        public object AdjacentTarget { get; set; }
+        
         public Position CurrentPosition { get; set; } = new Position(0, 0);
         
         public bool MouseDown = false;
 
         public Action<MouseEventArgs> MouseMoveAction = (args) => { };
         
-        public Action<bool> EndInputAction = (a) => { };
+        public Action<Partition, bool> EndInputAction = (a,b) => { };
         
         public void MouseIsDown()
         {
@@ -58,95 +63,23 @@ namespace DockTest.Source.Operations
             JsRuntime = controlOperation.JsRuntime;
         }
         
-        public Dictionary<Partition, List<string>> PartitionMap = new Dictionary<Partition, List<string>>();
+        public Dictionary<Partition, List<ElementContext>> PartitionMap = new Dictionary<Partition, List<ElementContext>>();
 
-        //child > parent
-        public Dictionary<Partition, Partition> PartitionParentMap = new Dictionary<Partition, Partition>();
-
-        public Dictionary<Partition, Identity> PartitionIdentities = new Dictionary<Partition, Identity>();
+        public Dictionary<Partition, int> PartitionIdentities = new Dictionary<Partition, int>();
 
         public Dictionary<object, Partition> ElementPartitionPair = new Dictionary<object, Partition>();
+      
+        public InputData PartitionSliderInputData { get; set; } = new InputData();
+        public Dictionary<Partition, (int delta, double percentA, double percentB)> PartitionWidth = new Dictionary<Partition, (int delta, double percentA, double percentB)>();
+        public Dictionary<Partition, Action> PartitionShiftMap = new Dictionary<Partition, Action>();
         
-        public void CreateSubPartition(Partition source, out Partition partition)
+        public async Task SetPartionIdentity(Partition source, int identity = 1)
         {
-            partition = new Partition($"{source.Context.Id}", source.JsRuntime);
-            List<string> values = null;
-
-            PartitionIdentities.TryAdd(source, Identity.ACROSS);
-            PartitionIdentities.TryAdd(partition, Identity.ACROSS);
+            if (!PartitionIdentities.TryAdd(source, identity)) PartitionIdentities[source] = identity;
             
-            if (!PartitionParentMap.TryAdd(partition, source))
-            {
-                if (PartitionMap.ContainsKey(source))
-                {
-                    PartitionMap[source].Remove(partition.Context.Id);
-                }
-
-                PartitionParentMap[partition] = source;
-            }
-            
-            if (!PartitionMap.TryAdd(source, values = new List<string>(new[] {partition.Context.Id})))
-            {
-                PartitionMap[source].AddRange(values);
-            }
-
-            source.ElementNode.Add(partition.ElementNode);
-
-            source.Context.cssClass = source.Context.cssClass.Replace(" fill", "");
-            source.Context.cssClass += " fill";
-            
-            source.StyleContext.WithStyle(StyleOperator, (ElementContext)source.ElementNode.Value, 
-                ("flex-grow", "1"));
-            
-            //AdjustGridAreas(source);
-        }
-
-        public void RemoveSubPartition(Partition item)
-        {
-            PartitionMap[PartitionParentMap[item]].Remove(item.Context.Id);
-            PartitionMap.Remove(item);
-            PartitionIdentities.Remove(item);
+            await source.StyleContext.WithStyle(StyleOperator, source.Context, ("flex-direction", identity % 2 == 1? "row" : "column"));
         }
         
-        public async Task SetPartionIdentity(Partition source, Identity identity = Identity.ACROSS)
-        {
-            if (!PartitionIdentities.TryAdd(source, identity))
-            {
-                PartitionIdentities[source] = identity;
-            }
-            
-            await AdjustGridAreas(source);
-        }
-        
-        public async Task AdjustGridAreas(Partition source)
-        {
-            string gridStyle = "";
-
-            switch (PartitionIdentities[source])
-            {
-                case Identity.ACROSS:
-                    gridStyle = $"\"{string.Join(" ", PartitionMap[source])}\"";
-                    break;
-                case Identity.VERTICAL:
-                    gridStyle = string.Join(" ",PartitionMap[source].Select(e => $"\"{e}\""));
-                    break;
-            }
-
-            await source.StyleContext.WithStyle(StyleOperator, (ElementContext)source.ElementNode.Value,
-                ("grid-template-areas", gridStyle));
-            Console.WriteLine(gridStyle);
-        }
-
-        public void AddElementToPartition(object element, Partition partition)
-        {
-            if (!ElementPartitionPair.TryAdd(element, partition)) ElementPartitionPair[element] = partition;
-        }
-        
-        public Partition GetElementPartition(object element)
-        {
-            return ElementPartitionPair[element];
-        }
-
         public ControlContext SetPartitionContent(Partition source, ControlContext content)
         {
             AddElementToPartition(content, source);
@@ -156,328 +89,285 @@ namespace DockTest.Source.Operations
             return content;
         }
 
-        public InputData PartitionSliderInputData { get; set; } = new InputData();
-        public Dictionary<Partition, (int delta, double percent)> PartitionWidth = new Dictionary<Partition, (int delta, double percent)>();
-        public Dictionary<Partition, Action> PartitionShiftMap = new Dictionary<Partition, Action>();
-        public Dictionary<Partition, int> HandleState = new Dictionary<Partition, int>();
-
-        public const int minSize = 20;
-        
-        public void RegisterPartitionEvents(Partition partitionA, Partition partitionB)
-        {
-            
-            Partition[] partitions = {partitionA, partitionB};
-            Partition parent = PartitionParentMap[partitionA];
-            
-            async void ShiftPartition(Partition parentSource, int dX, int dY)
-            {
-                Identity identity = PartitionIdentities[parentSource];
-
-                string[] sizeItems = identity == Identity.ACROSS ? new []{"min-width", "max-width"} : new []{"min-height", "max-height"};
-
-                (int delta, double percent) = PartitionWidth[parent];
-             
-                delta = (delta - (identity == Identity.ACROSS? dX : dY));
-             
-                PartitionWidth[parent] = (delta, percent);
-               
-                string propertyString = $"min(max({minSize}px, calc({(percent)*100}% - {delta}px)), calc(100% - {minSize}px))";
-                
-                await partitionA.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
-                    (sizeItems[0], propertyString),
-                    (sizeItems[1], propertyString)
-                    );
-            }
-
-            async void EndInputCapture(bool selfFire)
-            {
-                
-                Partition localParent = PartitionParentMap[partitionA];
-                
-                (int delta, double percent) = PartitionWidth[localParent];
-                
-                PartitionSliderInputData.State = PartitionSliderInputData.State == 1? 0:PartitionSliderInputData.State;
-                
-                if (PartitionSliderInputData.State == 2)
-                {
-                    return;
-                }
-                
-                string space = "                   ";
-                PartitionSliderInputData.MouseIsNotDown();
-                
-                Identity identity = PartitionIdentities[localParent];
-                var rectTaskParent = JsRuntime.InvokeAsync<Rect>("GetDimensions", localParent.Context.Id);
-                var rectTaskA = JsRuntime.InvokeAsync<Rect>("GetDimensions", partitionA.Context.Id);
-
-                bool across = identity == Identity.ACROSS;
-                
-                var rectParent = await rectTaskParent;
-                var rectA = await rectTaskA;
-
-                double sizeValue = across ? rectParent.width : rectParent.height;
-                
-                double offset = (across? rectA.width : rectA.height);
-                
-                double divisor = (across ? rectParent.width : rectParent.height);
-                
-                double into = offset / divisor;
-
-                string remaining = (into)*100+space;
-
-                double offTrim = (minSize / divisor);
-                
-                string[] sizeItems = identity == Identity.ACROSS ? new []{"min-width", "max-width"} : new []{"min-height", "max-height"};
-                
-                if (offset <= minSize)
-                {
-                    //PartitionWidth[localParent] = (0, (into = offTrim));
-                    remaining = (into)*100+space;
-                    remaining = $"{minSize}px";
-                    Console.WriteLine("1");
-                    HandleState[parent] = -1;
-                }else
-                if (offset >= sizeValue-minSize)
-                {
-                    //PartitionWidth[localParent] = (0, (into = offTrim));
-                    remaining = (1-into)*100+space;
-                    remaining = $"calc(100% - {minSize}px)";
-                    Console.WriteLine("2");
-                    HandleState[parent] = 1;
-                }
-                else
-                {
-                    remaining = $"calc({remaining[0..8].Trim()+"%"})";
-                    Console.WriteLine("3   " + into);
-                    HandleState[parent] = 0;
-                }
-                
-                
-                await partitionA.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
-                    (sizeItems[0], $"clamp(10px, {remaining}, calc(100% - 10px)) "),
-                    (sizeItems[1], $"clamp(10px, {remaining}, calc(100% - 10px)) ")
-                );
-            }
-            
-            async void StartInputCapture(MouseEventArgs mArgs)
-            {
-                PartitionSliderInputData.State = 1;
-                Partition localParent = PartitionParentMap[partitionA];
-                
-                var parentRectangle = JsRuntime.InvokeAsync<Rect>("GetDimensions", localParent.Context.Id);
-                var partitionARectangle = JsRuntime.InvokeAsync<Rect>("GetDimensions", partitionA.Context.Id);
-
-                bool across = PartitionIdentities[localParent] == Identity.ACROSS;
-
-                double parentSize = across ? (await parentRectangle).width : (await parentRectangle).height;
-                double partASize = across ? (await partitionARectangle).width : (await partitionARectangle).height;
-
-                PartitionWidth[localParent] = (0, partASize / parentSize);
-                
-                PartitionSliderInputData.CurrentPosition = new Position((int) mArgs.ScreenX, (int) mArgs.ScreenY);
-                
-                PartitionSliderInputData.MouseIsDown();
-                PartitionSliderInputData.MouseMoveAction = (a) =>
-                {
-                    Position cPos = new Position((int) a.ScreenX, (int) a.ScreenY);
-                        
-                    ShiftPartition(PartitionParentMap[partitionA], cPos.X - PartitionSliderInputData.CurrentPosition.X,
-                        cPos.Y - PartitionSliderInputData.CurrentPosition.Y);
-                        
-                    PartitionSliderInputData.CurrentPosition = cPos;
-                };
-                
-                PartitionSliderInputData.EndInputAction = EndInputCapture;
-            }
-            
-            if (!PartitionShiftMap.TryAdd(parent, () => { EndInputCapture(parent == PartitionSliderInputData.InputTarget); }))
-            {
-                PartitionShiftMap[parent] = () => { EndInputCapture(parent == PartitionSliderInputData.InputTarget); };
-            }
-            
-            parent.Context.AddEvent("onmouseleave", (args) =>
-            {
-                if (PartitionSliderInputData.InputTarget == parent && PartitionSliderInputData.MouseDown)
-                    PartitionShiftMap[parent]?.Invoke();
-            });
-
-            foreach (Partition p in partitions)
-            {
-                p.Context.StopPropagations.Add("onmousedown");
-                
-                p.Context.AddEvent("onmousedown", (args) =>
-                {
-                    PartitionSliderInputData.InputTarget = PartitionParentMap[p];
-                    StartInputCapture((MouseEventArgs) args);
-                });
-            
-                p.Context.AddEvent("onmouseup", (args) =>
-                {
-                    PartitionSliderInputData.EndInputAction?.Invoke(parent == PartitionSliderInputData.InputTarget);
-                    PartitionSliderInputData.MouseMoveAction = null;
-                    PartitionSliderInputData.InputTarget = null;
-                });
-            
-                p.Context.AddEvent("onmousemove", (args) =>
-                {
-                    MouseEventArgs mArgs = (MouseEventArgs) args;
-
-                    if ((mArgs.Buttons & 1) == 0)
-                    {
-                        if (PartitionSliderInputData.State == 0)
-                        {
-                            PartitionSliderInputData.State = 2;
-                            PartitionSliderInputData.EndInputAction?.Invoke(true);
-                            PartitionSliderInputData.MouseMoveAction = null;
-                            PartitionSliderInputData.EndInputAction = null;
-                            PartitionSliderInputData.MouseMoveAction?.Invoke((MouseEventArgs) args);
-                            return;
-                        }
-                    }
-                    else if((mArgs.Buttons & 1) == 1 && PartitionSliderInputData.InputTarget == PartitionParentMap[p])
-                    {
-                        if (PartitionSliderInputData.State == 0)
-                        {
-                            PartitionSliderInputData.MouseMoveAction?.Invoke((MouseEventArgs) args);
-                            StartInputCapture((MouseEventArgs) args);
-                            return;
-                            // PartitionSliderInputData.MouseMoveAction = null;
-                            // PartitionSliderInputData.EndInputAction = null;
-                        }
-                    }
-
-                    if (PartitionSliderInputData.InputTarget == PartitionParentMap[p])
-                    {
-                        if ((mArgs.Buttons & 1) == 0)
-                        {
-                            PartitionSliderInputData.MouseMoveAction = null;
-                            PartitionSliderInputData.EndInputAction = null;
-                        }
-                    }
-                    
-                    PartitionSliderInputData.MouseMoveAction?.Invoke((MouseEventArgs) args);
-                });
-            }
-        }
-        
-        public async Task SplitPartition(Partition source, Identity identity, Action<Partition, Partition,Partition> callback)
-        {
-            CreateSubPartition(source, out Partition partitionA);
-            CreateSubPartition(source, out Partition partitionB);
-            
-            int borderWidth = 8;
-            
-            PartitionWidth.TryAdd(source, (0, 0.5));
-
-            bool across = identity == Identity.ACROSS;
-            
-            partitionA.Context.cssClass += $" {(across? "":"")}";
-            partitionB.Context.cssClass += $" {(across? "across":"vertical")}";
-                
-            source.StyleContext.WithStyle(StyleOperator, source.Context, ("flex-direction", across? "row" : "column"));
-            
-            PartitionHandle handleA = new PartitionHandle(partitionA.Context.Id, JsRuntime, StyleOperator);
-            // handleA.Context.cssClass += $" {(across ? "across" : "vertical")}";
-            PartitionHandle handleB = new PartitionHandle(partitionB.Context.Id, JsRuntime, StyleOperator);
-            // handleB.Context.cssClass += $" {(across ? "across" : "vertical")}";
-            
-            string[] dim = {"left", "top", "width", "height"};
-
-            string margin = across ? "" : "";
-            
-            string[][] size = across
-                ? 
-                new[] {
-                    new[] {$"calc(100% - {borderWidth}px)", "0px", $"{borderWidth}px", "100%"},
-                    new[] {"0px", "0px", $"{borderWidth}px", "100%"}
-                } : 
-                new[] {
-                    new[] {"0px", $"calc(100% - {borderWidth}px)", "100%", $"{borderWidth}px"},
-                    new[] {"0px", "0px", "100%", $"{borderWidth}px"}
-                };
-            
-            handleA.SetStyles(
-                ("display", "none"),
-                ("position", "absolute"),
-                (dim[0], size[0][0]),
-                (dim[1], size[0][1]),
-                (dim[2], size[0][2]),
-                (dim[3], size[0][3]),
-                ("background-color","#f8001e22"),
-                (margin, $"{borderWidth}px")
-            );
-            
-            handleB.SetStyles(
-                //("display", "none"),
-                ("position", "absolute"),
-                (dim[0], size[1][0]),
-                (dim[1], size[1][1]),
-                (dim[2], size[1][2]),
-                (dim[3], size[1][3]),
-                ("background-color","#f8001e22"),
-                (margin, $"{borderWidth}px")
-            );
-                
-            partitionA.ElementNode.Add(handleA.ElementNode);
-            partitionB.ElementNode.Add(handleB.ElementNode);
-
-            string sizeProperty = across ? "min-width" : "min-height";
-            
-            partitionA.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
-                (sizeProperty, "calc(50% - 4px)"),
-                ("width","auto"),
-                ("height","auto")
-                );
-            
-            partitionB.StyleContext.WithStyle(StyleOperator, partitionA.Context, 
-                ("flex-grow", "1"));
-            
-            RegisterPartitionEvents(partitionA, partitionB);
-
-            await SetPartionIdentity(source, identity);   
-            callback(source, partitionA, partitionB);
-        }
-        
         public ControlContext RegisterPartitionContent(ControlContext content)
         {
             ControlContext contentControl = new ControlContext("partitionContent", JsRuntime);
-            
+            contentControl.cssClass = "partition-content";
             contentControl.WithStyles(out StyleContext style);
             style.WithStyle(StyleOperator, contentControl, 
                 ("flex-grow", "1"));
             
             contentControl.StopPropagations.Add("onmousedown");
-            
             content.SetParent(contentControl.ElementNode);
             
             return contentControl;
         }
         
-        public void PerformPartitionSplit(ControlContext sourceContext, ControlContext[] controlContexts, Identity identity)
+        public void AddElementToPartition(object element, Partition partition)
         {
-            var sCtx = GetElementPartition(sourceContext);
-            
-            SplitPartition(sCtx, identity,
-                (source, partitionA, partitionB) =>
-                {
-                    AddElementToPartition(controlContexts[0], partitionA);
-                    controlContexts[0].SetParent(partitionA.ElementNode);
-                    
-                    AddElementToPartition(controlContexts[1], partitionB);
-                    controlContexts[1].SetParent(partitionB.ElementNode);
-
-                    partitionA.Context.OnAfterRender += () =>
-                    {
-                    };
-
-                    sCtx.Context.SurrogateReference?.ChangeState();
-                    ((ElementContext) sCtx.ElementNode.Parent.Value).SurrogateReference?.ChangeState();
-                });
+            if (!ElementPartitionPair.TryAdd(element, partition)) ElementPartitionPair[element] = partition;
         }
         
-        public void OutputData()
+        public void CreateSubPartition(Partition source, out Partition partition)
         {
-            Console.WriteLine(string.Join(", ", PartitionMap.Select(e => $"{e.Key} : [{string.Join(", ", e.Value)}]")));
+            partition = new Partition($"{source.Context.Id}", source.JsRuntime);
+            List<Partition> values = null;
+
+            PartitionIdentities.TryAdd(source, 1);
+            PartitionIdentities.TryAdd(partition, 1);
+            
+            // if (!PartitionParentMap.TryAdd(partition, source))
+            // {
+            //     PartitionParentMap[partition] = source;
+            // }
+
+            source.ElementNode.Add(partition.ElementNode);
+
+            source.Context.cssClass = source.Context.cssClass.Replace(" fill", "");
+            source.Context.cssClass += " fill";
+            
+            source.StyleContext.WithStyle(StyleOperator, (ElementContext)source.ElementNode.Value, 
+                ("flex-grow", "1"));
+            
+            // if (!PartitionShiftMap.TryAdd(source, () => { EndInputCapture(source, source == PartitionSliderInputData.InputTarget); }))
+            // {
+            //     PartitionShiftMap[source] = () => { EndInputCapture(source, source == PartitionSliderInputData.InputTarget); };
+            // }
+            //
+            source.Context.AddEvent("onmouseleave", args =>
+            {
+                if (PartitionSliderInputData.InputTarget == source && PartitionSliderInputData.MouseDown)
+                    PartitionShiftMap[source]?.Invoke();
+            });
         }
+
+        Partition SetupPartitionContainer(dynamic content = null)
+        {
+            Partition p = new Partition("sub-partition", JsRuntime);
+            p.Context.cssClass = p.Context.cssClass.Replace(" fill", "").Replace(" sub", "");
+            p.Context.cssClass += " fill sub";
+
+            p.Context.StopPropagations.Add("onmousedown");
+            
+            p.Context.AddEvent("onmousedown", (args) =>
+            {
+                Console.WriteLine("doing click: "+p.Context.Id);
+            });
+            
+            if (content is not null)
+            {
+                p.ElementNode.Add(content.ElementNode);
+            }
+            return p;
+        }
+
+        int borderWidth = 8;
+
+        async Task ShiftPartition(ElementContext source, int dX, int dY)
+        {
+                
+        }
+        
+        async Task StartInputCapture(ElementContext source, MouseEventArgs mArgs)
+        {
+                
+        }
+        async Task EndInputCapture(ElementContext source, bool selfFire)
+        {
+                
+        }
+        
+        public void RegisterPartitionEvents(ElementContext ctx)
+        {
+
+            ctx.StopPropagations.Add("onmousedown");
+            
+            ctx.AddEvent("onmousedown", args =>
+            {
+                PartitionSliderInputData.InputTarget = ElementPartitionPair[ctx];
+                StartInputCapture(ctx, (MouseEventArgs) args);
+            });
+            
+            ctx.AddEvent("onmousemove", args =>
+            {
+                MouseEventArgs mArgs = (MouseEventArgs) args;
+                PartitionSliderInputData.InputTarget = ElementPartitionPair[ctx];
+                StartInputCapture(ctx, (MouseEventArgs) args);
+            });
+            
+        }
+        
+        public void RemoveBar(LinkMember container)
+        {
+            if (container.GetChildren().FirstOrDefault()?.Value is ElementContext firstChild)
+            {
+                if ((firstChild.cssClass??"").Contains("handle"))
+                {
+                    container[0].Pop();
+                }
+            }
+        }
+        
+        public void AddBar(LinkMember container, int dir)
+        {
+            bool across = dir % 2 == 1;
+
+            ElementContext ctx = (ElementContext) container.Value;
+            
+            PartitionHandle handle = new PartitionHandle((ctx).Id, JsRuntime, StyleOperator);
+            handle.Context.cssClass += $" {(across ? "across" : "vertical")}";
+            
+            string[] dim = {"left", "top", "width", "height"};
+            
+            string[] size = across
+                ? 
+                new[] {"-8px", "0px", $"{borderWidth}px", "100%"} : 
+                new[] {"0px", "-8px", "100%", $"{borderWidth}px"};
+            
+            handle.SetStyles(
+                ("position", "absolute"),
+                (dim[0], size[0]),
+                (dim[1], size[1]),
+                (dim[2], size[2]),
+                (dim[3], size[3])
+            );
+            
+            RemoveBar(container);
+            
+            container.Prepend(handle.ElementNode);
+        }
+
+        public void SetCss(ElementContext context, string css)
+        {
+            context.cssClass = 
+                (context.cssClass ?? "").Replace($" across", "").Replace(" vertical", "") + $" {css}";
+        }
+
+        public async Task AppendOverElement(ControlContext target, ControlContext into, int placement)
+        {
+            try
+            {
+                Partition parent = ElementPartitionPair[target];
+
+                Partition targetContainer = null;
+                
+                if (!PartitionMap.TryGetValue(parent, out var items))
+                {
+                    PartitionMap.Add(parent, items = new List<ElementContext>());
+                    items.Add(target);
+                    parent.ElementNode.Add((targetContainer = SetupPartitionContainer(target)).ElementNode);
+                }
+
+                int identity = PartitionIdentities[parent];
+                
+                if (ElementPartitionPair.TryGetValue(into, out var intoParent))
+                    if (PartitionMap.TryGetValue(intoParent, out var intoList))
+                    {
+                        bool removedInto;
+                        int intoIndex = intoList.IndexOf(into);
+                        if ((removedInto = intoList.Remove(into)) && intoList.Count == 0)
+                        {
+                            intoParent.Destroy();
+                            Console.WriteLine("destroyed");
+                        }
+                        else if (removedInto && intoIndex == 0)
+                        {
+                            RemoveBar(into.ElementNode.Parent.NextSibling);
+                        }
+                    }
+
+                var intoControlparent = into.ElementNode.Parent;
+
+                string cssVal = placement % 2 == 1 ? "across" : "vertical";
+
+                if (identity % 2 == placement % 2)
+                {
+
+                    string targetCss;
+                    if ((targetCss = (targetContainer?.Context.cssClass)) is not null)
+                    {
+                        if (!targetCss.Contains("across") && !targetCss.Contains("vertical"))
+                        {
+                            SetCss(targetContainer.Context, cssVal);
+                        }
+                    }
+                    
+                    if (!ElementPartitionPair.TryAdd(into, parent)) ElementPartitionPair[into] = parent;
+
+                    bool removed = items.Remove(into);
+
+                    Partition intoPartition = null;
+                    
+                    LinkMember p = removed ? into.ElementNode.Parent : (intoPartition = SetupPartitionContainer(into)).ElementNode;
+                    if (intoPartition is not null)
+                    {
+                        SetCss(intoPartition.Context, cssVal);
+                    }
+
+                    items.Insert(items.IndexOf(target) + (placement <= 2 ? 0 : 1), into);
+                    
+                    if (placement <= 2)
+                    {
+                        target.ElementNode.Parent.InsertBefore(p);
+
+                        if (items[1] == target)
+                        {
+                            AddBar(target.ElementNode.Parent, placement % 2);
+                            target.cssClass = (target.cssClass ?? "pad").Replace($" across", "").Replace(" vertical", "") + $" {cssVal}";
+                        }
+                        else
+                        {
+                            AddBar(into.ElementNode.Parent, placement % 2);
+                            into.cssClass = (into.cssClass ?? "pad").Replace($" across", "").Replace(" vertical", "") + $" {cssVal}";
+                        }
+                    }
+                    else
+                    {
+
+                        target.ElementNode.Parent.InsertAfter(p);
+
+                        if (items[0] == target)
+                        {
+                            target.cssClass = (target.cssClass ?? "pad").Replace($" across", "").Replace(" vertical", "") + $" {cssVal}";
+                        }
+
+                        AddBar(into.ElementNode.Parent, placement % 2);
+
+                        into.cssClass = (into.cssClass ?? "pad").Replace($" across", "").Replace(" vertical", "") + $" {cssVal}";
+                    }
+                    
+                    intoControlparent?.Pop();
+
+                }
+                else
+                {
+                    var targetParent = target.ElementNode.Parent;
+                    var hold = new LinkMember(null);
+
+                    Partition generatedPartition = SetupPartitionContainer();
+
+                    SetCss(generatedPartition.Context, cssVal);
+                        
+                    await SetPartionIdentity(generatedPartition, placement);
+
+                    var children = targetParent.GetChildren().ToList();
+                    targetParent.Replace(targetParent, generatedPartition.ElementNode);
+
+                    children.ForEach(e => generatedPartition.ElementNode.Add(e));
+                    items[items.IndexOf(target)] = generatedPartition.Context;
+                    
+                    ElementPartitionPair[target] = generatedPartition;
+
+                    await AppendOverElement(target, into, placement);
+                }
+                
+                ((ElementContext)parent.ElementNode.Parent.Value).SurrogateReference?.ChangeState();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+        
     }
 }

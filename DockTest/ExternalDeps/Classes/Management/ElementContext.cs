@@ -43,18 +43,26 @@ namespace DockTest.ExternalDeps.Classes.Management
             out EventCallback item) 
             ? item : default;
         
-        public void AddEvent(string name, Action<object> action)
+        public void AddEvent(string name, Action<object> action, bool reset = false)
         {
             if (!ActionMap.TryAdd(name, action))
             {
-                ActionMap[name] += action;
+                if (reset)
+                    ActionMap[name] = action;
+                else
+                    ActionMap[name] += action;
             }
-            if (!EventMap.TryAdd(name, EventCallback.Factory.Create(this, ActionMap[name])))
+            if (!EventMap.TryAdd(name, EventCallback.Factory.Create(this, GetAction(name))))
             {
-                EventMap[name] = EventCallback.Factory.Create(this, ActionMap[name]);
+                EventMap[name] = EventCallback.Factory.Create(this, GetAction(name));
             }
 
             SurrogateReference?.ChangeState();
+        }
+
+        private Action<object> GetAction(string name)
+        {
+            return (a) => { ActionMap[name](a); };
         }
 
     }

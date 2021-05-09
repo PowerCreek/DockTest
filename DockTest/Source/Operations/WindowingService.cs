@@ -85,17 +85,11 @@ namespace DockTest.Source.Operations
 
             spaceControl.WithContent(out Partition spacePartition);
             
-            await spacePartition.StyleContext.WithStyle(ControlOperation.StyleOperator, spacePartition.Context, 
-                ("grid-template-rows", "min-content auto min-content")
-            );
-            
             PartitionService.CreateSubPartition(spacePartition, out Partition partitionTop);
             PartitionService.CreateSubPartition(spacePartition, out Partition partitionCenter);
             PartitionService.CreateSubPartition(spacePartition, out Partition partitionBottom);
             
-            PartitionService.OutputData();
-            
-            await PartitionService.SetPartionIdentity(spacePartition, Identity.VERTICAL);
+            await PartitionService.SetPartionIdentity(spacePartition, 2);
 
             await partitionTop.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionTop.Context, 
                 ("background-color","darkgray"),
@@ -114,9 +108,6 @@ namespace DockTest.Source.Operations
                 ("border-top","2px solid black")
             );
             
-            await partitionCenter.StyleContext.WithStyle(ControlOperation.StyleOperator, partitionCenter.Context, 
-                ("grid-template-columns", "min-content auto min-content")
-            );
             
             PartitionService.CreateSubPartition(partitionCenter, out Partition partitionLeft);
             PartitionService.CreateSubPartition(partitionCenter, out Partition partitionMiddle);
@@ -149,13 +140,12 @@ namespace DockTest.Source.Operations
                 ControlContext ContentControlA = PartitionService.RegisterPartitionContent(testElementA);
                 
                 PartitionService.SetPartitionContent(partitionMiddle, ContentControlA);
+                PartitionService.SetPartionIdentity(partitionMiddle, 1);
                 
                 ContentControlA.WithStyles(out StyleContext contentStyleA);
                 await contentStyleA.WithStyle(ControlOperation.StyleOperator, ContentControlA, 
                     ("background-color", "darkgray"));
 
-                await Task.Delay(500);
-                
                 ControlContext testElementB = new ControlContext("testB", ControlOperation.JsRuntime);
                 testElementB.SetHtml("HELLO WORLD B");
 
@@ -165,67 +155,99 @@ namespace DockTest.Source.Operations
                 await contentStyleB.WithStyle(ControlOperation.StyleOperator, ContentControlB, 
                     ("background-color", "darkgray"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlB, ContentControlA}, Identity.ACROSS);
-                
-                
-                await Task.Delay(500);
-                
                 ControlContext testElementC = new ControlContext("testC", ControlOperation.JsRuntime);
                 testElementC.SetHtml("HELLO WORLD C");
-
+                
                 ControlContext ContentControlC = PartitionService.RegisterPartitionContent(testElementC);
                 
                 ContentControlC.WithStyles(out StyleContext contentStyleC);
                 await contentStyleC.WithStyle(ControlOperation.StyleOperator, ContentControlC, 
                     ("background-color", "darkgray"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlC, ContentControlA}, Identity.VERTICAL);
-                
-                await Task.Delay(500);
-                
                 ControlContext testElementD = new ControlContext("testD", ControlOperation.JsRuntime);
                 testElementD.SetHtml("HELLO WORLD D");
-
+                
                 ControlContext ContentControlD = PartitionService.RegisterPartitionContent(testElementD);
                 
                 ContentControlD.WithStyles(out StyleContext contentStyleD);
                 await contentStyleD.WithStyle(ControlOperation.StyleOperator, ContentControlD, 
                     ("background-color", "darkgray"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlB, new []{ContentControlD, ContentControlB}, Identity.ACROSS);
-                
-                await Task.Delay(500);
-                
                 ControlContext testElementE = new ControlContext("testE", ControlOperation.JsRuntime);
                 testElementE.SetHtml("HELLO WORLD E");
-
+                
                 ControlContext ContentControlE = PartitionService.RegisterPartitionContent(testElementE);
                 
                 ContentControlE.WithStyles(out StyleContext contentStyleE);
                 await contentStyleE.WithStyle(ControlOperation.StyleOperator, ContentControlE, 
                     ("background-color", "darkgray"));
                 
-                PartitionService.PerformPartitionSplit(ContentControlA, new []{ContentControlE, ContentControlA}, Identity.ACROSS);
+                ControlContext testElementF = new ControlContext("testF", ControlOperation.JsRuntime);
+                testElementF.SetHtml("HELLO WORLD F");
+                
+                ControlContext ContentControlF = PartitionService.RegisterPartitionContent(testElementF);
+                
+                ContentControlF.WithStyles(out StyleContext contentStyleF);
+                await contentStyleF.WithStyle(ControlOperation.StyleOperator, ContentControlF, 
+                    ("background-color", "darkgray"));
 
-                ControlContext hold = ContentControlE;
+                int count = 0;
+                int interval = 100;
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlA, ContentControlB, 2);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlA, ContentControlD, 2);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlB, ContentControlC, 1);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlB, ContentControlA, 1);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlC, ContentControlB, 4);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlB, ContentControlA, 1);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlD, ContentControlE, 1);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlB, ContentControlC, 4);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                PartitionService.AppendOverElement(ContentControlC, ContentControlE, 1);
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+                await Task.Delay(interval);
+                Console.WriteLine("count: "+count++);
+                // PartitionService.AppendOverElement(ContentControlC, ContentControlF, 4);
+                // await Task.Delay(500);
+                // Console.WriteLine("count: "+count++);
+                // PartitionService.AppendOverElement(ContentControlA, ContentControlF, 1);
+                // await Task.Delay(500);
+                // Console.WriteLine("count: "+count++);
                 
-                for (int i = 0; i < 5; i++)
-                {
-                    await Task.Delay(100);
-                
-                    ControlContext tempElement = new ControlContext("test_"+i, ControlOperation.JsRuntime);
-                    tempElement.SetHtml("HELLO WORLD");
+                // await Task.Delay(100);
+                // PartitionService.AppendOverElement(ContentControlA, ContentControlB, 1);
+                // await Task.Delay(100);
+                // PartitionService.AppendOverElement(ContentControlA, ContentControlC, 1);
+                // await Task.Delay(100);
+                // PartitionService.AppendOverElement(ContentControlA, ContentControlD, 1);
+                // await Task.Delay(100);
 
-                    ControlContext ContentControlTest = PartitionService.RegisterPartitionContent(tempElement);
-                
-                    ContentControlTest.WithStyles(out StyleContext contentStyleTest);
-                    await contentStyleTest.WithStyle(ControlOperation.StyleOperator, ContentControlTest, 
-                        ("background-color", "darkgray"));
-                
-                    PartitionService.PerformPartitionSplit(hold, new []{hold, ContentControlTest}, Identity.ACROSS);
-                    hold = ContentControlTest;
-                }
-                
+                partitionMiddle.Context.SurrogateReference?.ChangeState();
+
             });
         }
 

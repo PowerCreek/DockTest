@@ -34,7 +34,6 @@ namespace DockTest.ExternalDeps.Classes
 
         private void Mend(LinkMember start, LinkMember finish, LinkMember node)
         {
-            node.Pop();
             start?.SetNext(node);
             node.SetPrev(start);
             
@@ -48,7 +47,8 @@ namespace DockTest.ExternalDeps.Classes
             if (this == node)
                 return;
             //Can't insert itself before itself.
-
+            if (node.Parent == Parent) node.Pop();
+            
             var first = PreviousSibling;
             if (first is null)
             {
@@ -63,7 +63,6 @@ namespace DockTest.ExternalDeps.Classes
                 //so calling IsAncestorOf here is more appropriate than calling first.
 
                 Mend(first.END, this, node);
-
                 node.Parent = Parent;
             }
         }
@@ -71,6 +70,10 @@ namespace DockTest.ExternalDeps.Classes
         public void InsertAfter(LinkMember node)
         {
             if (this == node) return;
+            
+            if (node.Parent == Parent) node.Pop();
+            
+            Console.WriteLine(NextSibling is null);
             
             LinkMember after;
             if ((after = NextSibling) is null)
@@ -82,7 +85,6 @@ namespace DockTest.ExternalDeps.Classes
                 if (IsAncestorOf(node)) return;
 
                 Mend(END, after, node);
-
                 node.Parent = Parent;
             }
         }
@@ -91,14 +93,16 @@ namespace DockTest.ExternalDeps.Classes
         {
             if (this == node || IsAncestorOf(node)) return;
             
+            node.Pop();
             Mend(this, Next, node);
-
             node.Parent = this;
         }
 
         public void Add(LinkMember node)
         {
             if (this == node || IsAncestorOf(node)) return;
+            
+            node.Pop();
             Mend(END.Prev, END, node);
             node.Parent = this;
         }
@@ -202,6 +206,7 @@ namespace DockTest.ExternalDeps.Classes
         {
             remove.InsertAfter(insert);
             remove.Pop();
+            remove.Parent = null;
         }
         
         public LinkMember this[Index key]
