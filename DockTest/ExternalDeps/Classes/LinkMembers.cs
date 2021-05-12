@@ -73,7 +73,7 @@ namespace DockTest.ExternalDeps.Classes
             
             if (node.Parent == Parent) node.Pop();
             
-            Console.WriteLine(NextSibling is null);
+            //Console.WriteLine(NextSibling is null);
             
             LinkMember after;
             if ((after = NextSibling) is null)

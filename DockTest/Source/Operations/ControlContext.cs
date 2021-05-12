@@ -21,9 +21,9 @@ namespace DockTest.Source.Operations
         PARTITION
     }
     
-    public class ControlContext : ElementContext
+    public class ControlContext : ElementContext, IElementNode
     {
-        public LinkMember ElementNode { get; }
+        public LinkMember ElementNode { get; init; }
         public IJSRuntime JsRuntime { get; init; }
 
         public ControlContext(string id, IJSRuntime jsRuntime) : base(id)

@@ -6,7 +6,12 @@ using DockTest.Source.Properties;
 
 namespace DockTest.Source.Operations
 {
-    public class BaseContent
+    public interface IElementNode
+    {
+        public LinkMember ElementNode { get; init; }
+    }
+    
+    public class BaseContent : IElementNode
     {
         public ControlAttribute ControlAttribute { get; init; }
         public ElementContext Context { get; init; }
@@ -25,11 +30,11 @@ namespace DockTest.Source.Operations
         
         public void Destroy()
         {
-            Action ChangeState = ((ElementContext) ElementNode.Parent.Value).SurrogateReference.ChangeState;
+            Action ChangeState = ((ElementContext) ElementNode.Parent?.Value)?.SurrogateReference?.ChangeState;
             Context.Key = Guid.NewGuid().ToString();
             ElementNode.Pop();
             ElementNode.Parent = null;
-            ChangeState();
+            ChangeState?.Invoke();
         }
     }
 }
